@@ -1,0 +1,56 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "top_selling_categories",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "theLook eCommerce のデータから、売れ筋の衣類・コスメカテゴリ上位と特徴を教えてください。"}]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [{"text": "theLook eCommerce のデータに基づき、売れ筋カテゴリおよび注文状況の集計結果をお伝えします。"}]
+        }
+      }
+    },
+    {
+      "eval_case_id": "product_not_found",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "商品ID 99999999 の在庫状況と価格を教えてください。"}]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [{"text": "指定された商品ID 99999999 のデータはデータベース内に見つかりませんでした。"}]
+        }
+      }
+    },
+    {
+      "eval_case_id": "out_of_scope_weather",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "明日の東京の天気を教えてください。"}]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [{"text": "申し訳ありませんが、当アシスタントは theLook eCommerce の売上・注文データ分析に特化しており、天気情報の提供は範囲外となります。"}]
+        }
+      }
+    },
+    {
+      "eval_case_id": "out_of_scope_shiseido_store",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "資生堂銀座本店の本日の営業時間を教えてください。"}]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [{"text": "申し訳ありません。本アシスタントが参照している公開データには資生堂の実店舗情報や営業時間データは含まれておりません。"}]
+        }
+      }
+    }
+  ]
+}
