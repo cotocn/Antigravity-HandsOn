@@ -459,12 +459,14 @@ terraform destroy
 ## 6. コンテナ定義とビルド（Cloud Build）【※通常はスキップ可能・アドバンスド】
 
 > [!IMPORTANT]
-> **【通常は本セクションの実施は不要です】**
-> Cloud Workstations の標準イメージ（`code-oss:latest`）には、最初から **Antigravity CLI (`agy`)** および **Gemini CLI (`gemini`)** がプリインストールされています。
-> したがって、独自の社内ツールや追加ライブラリ（特定の Linter や言語ランタイム等）をコンテナに事前組み込みしたい場合を除き、本セクション（Dockerfile の作成・ビルド）はスキップして構いません。
+> **【通常は本セクション（カスタム Docker ビルド）の実施は不要です】**
+> 1. **標準イメージで Antigravity / Gemini CLI が利用可能**: Cloud Workstations の標準イメージ（`code-oss:latest`）には、最初から **Antigravity CLI (`agy`)** および **Gemini CLI (`gemini`)** がプリインストールされています。
+> 2. **`agents-cli` (`google-agents-cli`) も Docker 変更なしで永続化可能**: Cloud Workstations では `/home`（`/home/user`）領域が **永続ディスク（Persistent Disk 50GB）** としてマウントされます。そのため、受講者が初回起動時にターミナルで 1 行セットアップコマンド（`uv` および `google-agents-cli` のインストール）を実行するだけで、コンテナの再起動やサスペンド後もツール・ADK スキル一式（`~/.gemini/` 等）がそのまま永続保持されます。
+>
+> ※もし `Dockerfile` ビルド時に `/home/user` 配下へツールをインストールしても、ワークステーション起動時に空の `/home` 永続ディスクが上からマウント（上書きマスク）されて消えてしまう点に注意してください。カスタムイメージに事前組み込みする場合は、以下の例のように `/usr/local` などのシステム領域へ配置するか、`/etc/workstation-startup.d/` の起動スクリプトを使用します。
 
-### カスタムイメージが必要な場合の `Dockerfile` 例
-標準の Code OSS（Web IDE）をベースに、追加ツールを組み込む場合の構成例です。
+### カスタムイメージを作成する場合の `Dockerfile` 例（システム領域へのプリインストール）
+標準の Code OSS（Web IDE）をベースに、`uv` や `google-agents-cli` 等をシステム領域（`/usr/local`）へ事前組み込みする場合の構成例です。
 
 ```dockerfile
 FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:latest
@@ -481,15 +483,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Antigravity CLI のインストール
-RUN mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | \
-    gpg --dearmor --yes -o /etc/apt/keyrings/antigravity-repo-key.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" | \
-    tee /etc/apt/sources.list.d/antigravity.list > /dev/null && \
-    apt-get update && \
-    apt-get install -y antigravity && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# uv および google-agents-cli をシステム共通領域 (/usr/local) にインストール
+# ※ /home 配下にインストールすると永続ディスクマウント時に隠蔽されるため環境変数でインストール先を指定
+ENV UV_INSTALL_DIR="/usr/local/bin" \
+    UV_TOOL_BIN_DIR="/usr/local/bin" \
+    UV_TOOL_DIR="/opt/uv-tools"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    uv tool install google-agents-cli
+
+# コンテナ起動時に受講者の /home/user へ ADK スキル一式 (agents-cli setup) を自動展開するスタートアップスクリプト
+RUN mkdir -p /etc/workstation-startup.d && \
+    cat << 'EOF' > /etc/workstation-startup.d/110_setup_agents_cli.sh
+#!/bin/bash
+# 初回起動時のみ /home/user に ADK スキル一式を展開
+if [ ! -f /home/user/.agents_cli_initialized ]; then
+  su - user -c "uvx google-agents-cli setup"
+  touch /home/user/.agents_cli_initialized
+fi
+EOF
+RUN chmod +x /etc/workstation-startup.d/110_setup_agents_cli.sh
 
 # Workstations 標準ユーザーに戻す
 USER user
@@ -524,7 +536,7 @@ Cloud Workstations の最大の特長は、**インフラ構築の負担がす�
  1. 案内された URL をブラウザで開く
  2. 自分専用のワークステーションの [起動] をクリック（コンテナが立ち上がる）
  3. [開く] をクリックすると、ブラウザ上に VS Code (Code OSS) が全画面で起動！
- 4. すぐに Antigravity による開発を開始！
+ 4. 初回のみターミナルで 1 行セットアップを実行し、すぐに Antigravity × agents-cli による開発を開始！
 ```
 
 ---
@@ -563,13 +575,16 @@ gcloud workstations add-iam-policy-binding ws-user01 \
 
 ### 7.3. 受講者の当日接続ステップ（これだけ案内すればOK）【受講者が実施】
 
-受講者向けの案内文面（チャットやメールで送る内容）は、以下の **3 ステップのみ** で完結します。
+受講者向けの案内文面（チャットやメールで送る内容）は、以下の **4 ステップのみ** で完結します。
 
 > **【受講者向けハンズオン参加手順】**
 > 1. Google Chrome 等のブラウザで [Cloud Workstations コンソール](https://console.cloud.google.com/workstations) にアクセスしてください。
 > 2. ご自身のアカウント宛に割り当てられたワークステーション（例: `ws-user01`）が表示されますので、**[起動]** をクリックしてください。
 > 3. ステータスが「実行中」に変わったら、**[開く]** をクリックしてください。
-> 4. ブラウザ上に Antigravity がセットアップ済みの開発画面（VS Code / Code OSS）が表示され、演習を開始できます！
+> 4. ブラウザ上で IDE（VS Code / Code OSS）が開いたら、ターミナル（`Ctrl + ~`）で以下の **初回セットアップコマンド（1行）** を実行してください（`/home` 永続ディスクに保存されるため初回のみで OK です）：
+>    ```bash
+>    curl -LsSf https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env && uv tool install google-agents-cli && uvx google-agents-cli setup
+>    ```
 
 ### 7.4. 各受講者による接続方法（2 通りの選択肢）【受講者が実施】
 
@@ -582,9 +597,16 @@ gcloud workstations add-iam-policy-binding ws-user01 \
 2. **ワークステーションを開く**:
    代表者がすでに起動済みの場合は、そのまま **「開く」** をクリックします。
    （停止している場合は、受講者自身で **「起動」** をクリックし、約 1 分後に **「開く」** をクリックします）
-3. **エージェントの利用開始**:
+3. **`agents-cli` 初回セットアップ & エージェントの利用開始**:
    * ブラウザ上に VS Code と同様の IDE（Code OSS）が表示されます。
-   * 下部の統合ターミナル（`Ctrl + ~`）を開き、`gemini` または `agy` を入力すると対話型コーディングが開始されます。
+   * 下部の統合ターミナル（`Ctrl + ~`）を開き、初回のみ以下を実行して `uv` と `google-agents-cli`（および Antigravity 向け ADK スキル一式）を導入します：
+     ```bash
+     # uv の導入 + google-agents-cli インストール + ADK スキル一式のセットアップ
+     curl -LsSf https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env
+     uv tool install google-agents-cli
+     uvx google-agents-cli setup
+     ```
+   * インストール完了後、`agents-cli info` でバージョンを確認し、`agy` または `gemini` を起動してエージェント開発を開始します。（`/home` ディレクトリは永続ディスクにマウントされているため、次回以降の起動時はこの手順は不要です）
 
 ---
 
