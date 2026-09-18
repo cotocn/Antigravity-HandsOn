@@ -563,12 +563,17 @@ for USER_ID in user01 user02 user03; do
 done
 
 # 各受講者に、自分専用のワークステーションのみを起動・利用できる権限を付与
-gcloud workstations add-iam-policy-binding ws-user01 \
+# (※作成者自身には自動的に roles/workstations.user が付与されます)
+cat << 'EOF' > /tmp/ws-policy.yaml
+bindings:
+- members:
+  - user:user01@example.com
+  role: roles/workstations.user
+EOF
+gcloud workstations set-iam-policy ws-user01 /tmp/ws-policy.yaml \
   --cluster=antigravity-cluster \
   --config=antigravity-config \
-  --region=asia-northeast1 \
-  --member="user:user01@example.com" \
-  --role="roles/workstations.user"
+  --region=asia-northeast1
 ```
 
 ---
