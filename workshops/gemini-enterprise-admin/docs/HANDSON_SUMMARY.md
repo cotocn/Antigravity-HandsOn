@@ -38,15 +38,17 @@
 ハンズオンを開始する前に、演習用資材（`starter-kit`）を手元の PC に準備します。
 社内セキュリティポリシーやネットワーク環境に応じて、**【方法 A】** または **【方法 B】** のいずれかで準備してください。
 
-### 【方法 A】GitHub からクローンする場合（推奨）
-ターミナルを開き、以下を実行します。
+### 【方法 A】GitHub から取得する場合（推奨）
+ターミナルを開き、以下を実行します（`starter-kit` フォルダのみを抽出し、不要な履歴や親フォルダを削除します）。
 
 ```bash
-# 1. ワークショップ資材のクローン
-git clone https://github.com/cotocn/Antigravity-HandsOn.git
+# 1. main ブランチのみを浅くクローンし、starter-kit だけを抽出（ネタバレ・親フォルダ誤選択の防止）
+git clone --depth 1 --single-branch --branch main https://github.com/cotocn/Antigravity-HandsOn.git _tmp_handson
+mv _tmp_handson/workshops/gemini-enterprise-admin/starter-kit ./starter-kit
+rm -rf _tmp_handson
 
 # 2. starter-kit フォルダへ移動し、初期セットアップ
-cd Antigravity-HandsOn/workshops/gemini-enterprise-admin/starter-kit
+cd starter-kit
 uv sync
 ```
 

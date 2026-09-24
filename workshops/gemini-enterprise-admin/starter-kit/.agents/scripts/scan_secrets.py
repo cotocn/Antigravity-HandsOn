@@ -1,52 +1,29 @@
 #!/usr/bin/env python3
-"""Stop フック: シークレットがソースコードに直書きされていないか検査する。
-
-Antigravity が「作業を終えよう」とした瞬間にこのスクリプトが呼ばれる。
-問題が見つかれば、終了を拒否してエージェントに差し戻す。
-
-出力の契約（厳密）:
-  - 差し戻す: {"decision": "continue", "reason": "..."} を出力して exit 0
-  - 通す    : 何も出力せず exit 0
-
-【重要 1】decision が "continue" または "block" のときだけエージェントは続行する。
-          それ以外の値を返すと、そのまま終了してしまう。
-【重要 2】reason はシステムメッセージとしてエージェントに届く。
-          「何が悪いか」だけでなく「どう直すか」を書くこと。
-【重要 3】Stop フックは "fails open"。このスクリプトが異常終了すると、
-          ブロックされずに終了してしまう（しかも何も表示されない）。
-          だから絶対に例外を外に出さない。
-"""
+"""Stop hook utility: checks whether secret literals are hardcoded in app/."""
 
 import json
-import os
 import pathlib
 import re
 import sys
 import tempfile
 
-# 「〜KEY / 〜TOKEN / 〜SECRET / 〜PASSWORD」という名前の変数に、
-# 16 文字以上の文字列リテラルを直接代入している行を探す。
-#
-#   NG: ITSM_API_KEY = "sk-itsm-live-9f3a2b7c8d1e4f60"
-#   OK: ITSM_API_KEY = os.environ.get("ITSM_API_KEY", "")   ← 右辺が文字列リテラルでない
 SECRET_PATTERN = re.compile(
     r"""(\w*(?:KEY|TOKEN|SECRET|PASSWORD))\s*=\s*["']([^"']{16,})["']""",
     re.IGNORECASE,
 )
 
-# 同じ会話で何度もブロックし続けると無限ループになるため、上限を設ける。
 MAX_BLOCKS_PER_CONVERSATION = 3
 
-# プロジェクトのルート（このスクリプトは <root>/.agents/scripts/ に置かれている）。
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCAN_TARGET = PROJECT_ROOT / "app"
 
 
-def find_secrets() -> list[str]:
-    """直書きされたシークレットを探して、指摘文のリストを返す。"""
+def find_secrets() -> tuple[list[str], str]:
+    """Scan app/ for hardcoded secret literals and return findings and first variable name."""
     findings = []
+    first_var = "API_KEY"
     if not SCAN_TARGET.is_dir():
-        return findings
+        return findings, first_var
 
     for path in sorted(SCAN_TARGET.rglob("*.py")):
         try:
@@ -57,12 +34,14 @@ def find_secrets() -> list[str]:
             match = SECRET_PATTERN.search(line)
             if match:
                 rel = path.relative_to(PROJECT_ROOT)
-                findings.append(f"  - {rel}:{lineno}  変数 {match.group(1)}")
-    return findings
+                var_name = match.group(1)
+                if not findings:
+                    first_var = var_name
+                findings.append(f"  - {rel}:{lineno}  変数 {var_name}")
+    return findings, first_var
 
 
 def block_count(conversation_id: str) -> int:
-    """この会話で既に何回ブロックしたかを数える（無限ループ防止）。"""
     if not conversation_id:
         return 0
     marker = pathlib.Path(tempfile.gettempdir()) / f"scan_secrets_{conversation_id}.count"
@@ -83,16 +62,14 @@ def main() -> None:
         pass
 
     try:
-        findings = find_secrets()
+        findings, first_var = find_secrets()
     except Exception:
-        # 検査そのものが壊れた。止める根拠がないので通す。
         return
 
     if not findings:
         return
 
     if block_count(conversation_id) >= MAX_BLOCKS_PER_CONVERSATION:
-        # 何度差し戻しても直らない。これ以上は人間が見る。
         return
 
     reason = (
@@ -102,7 +79,7 @@ def main() -> None:
         + "\n\n"
         "全社エージェント開発規約に従い、環境変数から読み込むよう修正してください。\n"
         "例:\n"
-        '    ITSM_API_KEY = os.environ.get("ITSM_API_KEY", "")\n\n'
+        f'    {first_var} = os.environ.get("{first_var}", "")\n\n'
         "修正したうえで、再度作業を完了してください。"
     )
 
