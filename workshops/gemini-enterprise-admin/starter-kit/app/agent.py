@@ -1,74 +1,53 @@
-"""社内 IT ヘルプデスク・アシスタント。
+"""資生堂 EC・コスメ データ分析アシスタント（スターター版）。
 
-事業部から全社公開の申請が出ているエージェント。
-あなたは Gemini Enterprise 管理者として、これを審査する立場にある。
+事業部（マーケティング部）から全社公開の申請が出ているエージェント。
+あなたは Gemini Enterprise 管理者として、このエージェントを審査・統制する立場にある。
 
-【重要】このファイルを手で編集しないこと。
-        修正が必要な場合は .agents/AGENTS.md（全社エージェント開発規約）を整備し、
-        Antigravity に直させること。
+【重要】このファイルを手で直接修正しないこと。
+        修正が必要な場合は全社開発規約（AGENTS.md）やガードレール（hooks.json）を整備し、
+        Antigravity に指示して自動修正・検証させること。
 """
 
+import os
 from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models import Gemini
 from google.genai import types
 
-MODEL = "gemini-3.8-flash"
+MODEL = "gemini-3.7-flash"
 
-# --- 社内チケットシステム (ITSM) への接続情報 -------------------------------
-ITSM_ENDPOINT = "https://itsm.example.corp/api/v1"
-ITSM_API_KEY = "sk-itsm-live-9f3a2b7c8d1e4f60"
-
-
-# --- ダミーデータ -----------------------------------------------------------
-# 本ワークショップでは外部システムに接続しない。
-_FAQ = {
-    "vpn": "VPN に接続できない場合は、社内 Wi-Fi を一度切断してから再接続してください。",
-    "password": "パスワードの再設定は社内ポータルの「アカウント管理」から行えます。",
-    "printer": "プリンタが見つからない場合は、IP アドレス 10.0.32.15 を手動で追加してください。",
-    "vdi": "VDI が遅い場合は、セッションを一度サインアウトしてから再接続してください。",
-}
-
-_TICKETS = {
-    "INC-1001": {"status": "対応中", "assignee": "IT 基盤チーム", "summary": "VPN 接続不可"},
-    "INC-1002": {"status": "解決済", "assignee": "ヘルプデスク", "summary": "パスワードロック"},
-    "INC-1003": {"status": "保留", "assignee": "調達チーム", "summary": "モニタ交換依頼"},
-}
+# --- マーケティング分析システムへの接続情報（審査での指摘対象） -------------------
+# 【注意】APIキーがコード内にハードコードされています（セキュリティ規約違反）。
+MARKETING_API_KEY = "shiseido_ecommerce_analytics_secret_8899"
+MARKETING_ENDPOINT = "https://analytics.example.corp/api/v1"
 
 
-def search_faq(keyword: str) -> dict:
-    """社内 IT の FAQ をキーワードで検索する。
+def query_marketing_dashboard(metric_name: str) -> dict:
+    """社内マーケティングダッシュボードからメトリクス概要を取得する。
 
     Args:
-      keyword: 検索キーワード（例: "vpn", "password"）。
+      metric_name: 取得したい指標名（例: "daily_active_users", "conversion_rate"）。
 
     Returns:
-      一致した FAQ の辞書。
+      メトリクス情報の辞書。
     """
-    hits = {k: v for k, v in _FAQ.items() if keyword.lower() in k}
-    return {"results": hits}
-
-
-def lookup_ticket(ticket_id: str) -> dict:
-    """チケット ID を指定して、問い合わせの対応状況を照会する。
-
-    Args:
-      ticket_id: チケット ID（例: "INC-1001"）。
-
-    Returns:
-      チケットの状態。
-    """
-    # 本来はここで ITSM API を呼び出す。
-    _headers = {"Authorization": f"Bearer {ITSM_API_KEY}"}
-    return _TICKETS.get(ticket_id, {"error": "該当するチケットがありません"})
+    # 本来はここで認証ヘッダーを付与して外部 API を呼び出す
+    _headers = {"Authorization": f"Bearer {MARKETING_API_KEY}"}
+    dummy_metrics = {
+        "daily_active_users": {"value": 142500, "status": "normal"},
+        "conversion_rate": {"value": 0.038, "status": "warning"},
+        "cart_abandonment": {"value": 0.68, "status": "high"},
+    }
+    return dummy_metrics.get(metric_name, {"status": "metric_not_found"})
 
 
 root_agent = Agent(
-    name="helpdesk_agent",
+    name="ecommerce_analyst_agent",
     model=Gemini(model=MODEL, retry_options=types.HttpRetryOptions(attempts=3)),
-    description="社内 IT の問い合わせに対応するヘルプデスク・アシスタント",
-    instruction="社内 IT の問い合わせに答えてください。",
-    tools=[search_faq, lookup_ticket],
+    description="資生堂ECの売上分析およびマーケティング施策のアドバイスを行うアシスタント",
+    # 意図的な欠陥: ガイドラインや制約のない1行だけの指示
+    instruction="EC・コスメの売上や注文データを分析し、マーケティング施策のアドバイスを行ってください。",
+    tools=[query_marketing_dashboard],
 )
 
 app = App(root_agent=root_agent, name="app")
