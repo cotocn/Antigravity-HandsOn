@@ -1,0 +1,20 @@
+# Agent / eval 実行時の生成物
+artifacts/
+deployment_metadata.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# 環境依存
+.env
+.env.*
+!.env.example
+
+# エディタ / OS
+.DS_Store
+.idea/
+.vscode/
