@@ -11,7 +11,7 @@ from google.genai import types
 
 MODEL = "gemini-3.7-flash"
 
-# マーケティング分析システム接続設定（審査での指摘対象: 直書き）
+# マーケティング分析システム接続設定
 MARKETING_API_KEY = "ecommerce_analytics_secret_8899"
 MARKETING_ENDPOINT = "https://analytics.example.corp/api/v1"
 
@@ -38,7 +38,6 @@ root_agent = Agent(
     name="ecommerce_analyst_agent",
     model=Gemini(model=MODEL, retry_options=types.HttpRetryOptions(attempts=3)),
     description="ECサイトの売上・注文データ分析およびマーケティング施策のアドバイスを行うアシスタント",
-    # 意図的な欠陥: ガイドラインや制約のない1行だけの指示
     instruction="ECサイトの売上や注文データを分析し、マーケティング施策のアドバイスを行ってください。",
     tools=[query_marketing_dashboard],
 )

@@ -70,11 +70,11 @@ Gemini Enterprise 管理者を対象にした 3 時間のワークショップ�
 | ファイル | 層 | 状態 |
 | --- | --- | --- |
 | `AGENTS.md` | 開発時 | ⚠️ 事業部が書いた緩い 3 行。① で全社規約に書き換える |
-| `app/agent.py` | 実行時 | ⚠️ ITSM_API_KEY 直書き、instruction が 1 文。**手で編集せず、エージェントに直させる** |
+| `app/agent.py` | 実行時 | ⚠️ `MARKETING_API_KEY` 直書き、`instruction` が 1 文。**手で編集せず、エージェントに直させる** |
 | `.agents/scripts/validate_tool_call.py` | 開発時 | ✅ 危険コマンド遮断スクリプト（講師提供） |
 | `.agents/scripts/scan_secrets.py` | 開発時 | ✅ シークレット直書き検知スクリプト（講師提供） |
 | `.agents/hooks.json` | 開発時 | ❌ 意図的に未作成。③ で受講者が作成する |
-| `tests/eval/datasets/helpdesk-eval.json` | — | ✅ 社内 IT ヘルプデスク用の評価ケース（FAQ 検索、チケット照会、範囲外対応） |
+| `tests/eval/datasets/ecommerce-eval.json` | — | ✅ EC 売上データ分析用の評価ケース（カテゴリ集計、存在しない商品ID、範囲外対応） |
 | `tests/eval/eval_config.yaml` | — | ✅ LLM-as-judge メトリクス設定 |
 
 > [!WARNING]

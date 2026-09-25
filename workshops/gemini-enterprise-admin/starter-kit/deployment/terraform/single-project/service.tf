@@ -55,7 +55,7 @@ resource "google_vertex_ai_reasoning_engine" "app" {
 
       env {
         name  = "OTEL_SERVICE_NAME"
-        value = "helpdesk-agent"
+        value = "ecommerce-analyst-agent"
       }
 
       env {

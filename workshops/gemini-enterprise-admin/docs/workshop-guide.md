@@ -47,7 +47,7 @@
 
 ### 1-4. 題材
 
-**社内 IT ヘルプデスク・アシスタント**。
+**EC 売上・購買データ分析アシスタント**。
 
 > [!NOTE]
 > **外部データソースには一切接続しません。** エージェントが持つのは、
@@ -261,7 +261,7 @@ gcloud services enable \
 
 ### 5-1. シナリオ設定（受講者への導入トーク）
 
-> 「ある事業部から、社内 IT ヘルプデスクを支援するエージェントを**全社公開したい**という
+> 「ある事業部（マーケティング部）から、EC 売上・購買データ分析を支援するエージェントを**全社公開したい**という
 >  申請が上がってきました。
 >  あなたは Gemini Enterprise 管理者として、これを**審査し、安全な状態にして公開する立場**です。
 >  ただし——**あなたはコードを書きません。**
@@ -282,10 +282,10 @@ gcloud services enable \
 
 ### 5-3. 配布物
 
-講師が用意した ZIP を展開してもらいます（`agents-cli scaffold` 済みの正規プロジェクト）。
+講師が用意した `starter-kit` を展開してもらいます（`agents-cli scaffold` 済みの正規プロジェクト）。
 
 ```
-helpdesk-agent/
+starter-kit/
 ├── agents-cli-manifest.yaml
 ├── pyproject.toml
 ├── app/
@@ -308,21 +308,21 @@ helpdesk-agent/
 ### 5-4. 配布される `app/agent.py` の欠陥
 
 ```python
+MARKETING_API_KEY = "ecommerce_analytics_secret_8899"  # ⚠️ ここが欠陥
+
 root_agent = Agent(
-    name="helpdesk_agent",
-    model=Gemini(
-        model="gemini-3.8-flash",
-        api_key="AIzaSyD-mock-key-value-12345",   # ⚠️ ここが欠陥
-    ),
-    instruction="社内 IT の問い合わせに答えてください。",
-    tools=[lookup_ticket, list_faq],
+    name="ecommerce_analyst_agent",
+    model=Gemini(model=MODEL, retry_options=types.HttpRetryOptions(attempts=3)),
+    description="ECサイトの売上・注文データ分析およびマーケティング施策のアドバイスを行うアシスタント",
+    instruction="ECサイトの売上や注文データを分析し、マーケティング施策のアドバイスを行ってください。",
+    tools=[query_marketing_dashboard],
 )
 ```
 
 **API キーがソースコードに直書きされています。** これが今日、受講者が Hook で止めて直させる対象です。
 
 > [!NOTE]
-> ツール `lookup_ticket` / `list_faq` は、**ダミーデータを返すだけの関数**です。
+> ツール `query_marketing_dashboard` は、**ダミーデータを返すだけの関数**です。
 > 外部システムには接続しません。
 
 ---
@@ -396,7 +396,7 @@ description: コード、PRD、設計書、スライド、Web記事等の論理�
 
 ```json
 {
-  "helpdesk-guardrails": {
+  "enterprise-guardrails": {
     "enabled": true,
     "PreToolUse": [
       {
@@ -462,13 +462,13 @@ description: コード、PRD、設計書、スライド、Web記事等の論理�
 4. scan_secrets.py が app/agent.py 内の直書き API キーを検出
        ↓
 5. 「【ガードレールによる差し戻し】シークレットがソースコードに直書きされています。
-      ITSM_API_KEY = os.environ.get("ITSM_API_KEY", "") に修正してください。」を返す
+      MARKETING_API_KEY = os.environ.get("MARKETING_API_KEY", "") に修正してください。」を返す
        ↓
 6. ★ エージェントは終了を拒否される（強制差し戻し）
        ↓
 7. AGENTS.md の規約 2（是正ループ）に従い、エージェントが自分でエラーを読む
        ↓
-8. ITSM_API_KEY = os.environ.get("ITSM_API_KEY", "") へ自動で修正
+8. MARKETING_API_KEY = os.environ.get("MARKETING_API_KEY", "") へ自動で修正
        ↓
 9. 再度終了を試みる → 検査を通過 → 正常完了！
 ```
@@ -514,7 +514,7 @@ agents-cli deploy --no-wait
 
 ```bash
 agents-cli eval run \
-  --dataset tests/eval/datasets/helpdesk-eval.json \
+  --dataset tests/eval/datasets/ecommerce-eval.json \
   --config  tests/eval/eval_config.yaml
 ```
 
@@ -540,8 +540,8 @@ agents-cli deploy --status
 # Gemini Enterprise への登録（＝全社公開）
 # ※ 複数受講者のアプリ混同を防ぐため、表示名に受講者名を含めます。
 agents-cli publish gemini-enterprise \
-  --display-name "社内 IT ヘルプデスク・アシスタント (受講者名)" \
-  --description "社内 IT の問い合わせ対応を支援する全社認定AIアシスタント"
+  --display-name "EC 売上・購買データ分析アシスタント (受講者名)" \
+  --description "EC 売上・注文データの分析を支援する全社認定AIアシスタント"
 ```
 
 - ブラウザで Gemini Enterprise を開き、カタログに登録された自分のエージェント（名前付き）と対話します。

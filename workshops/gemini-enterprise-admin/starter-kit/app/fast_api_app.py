@@ -71,8 +71,8 @@ app: FastAPI = get_fast_api_app(
     otel_to_cloud=otel_to_cloud,
     lifespan=lifespan,
 )
-app.title = "helpdesk-agent"
-app.description = "API for interacting with the Agent helpdesk-agent"
+app.title = "ecommerce-analyst-agent"
+app.description = "API for interacting with the Agent ecommerce-analyst-agent"
 
 # Proxy routes so the Vertex AI Console Playground (reasoning_engine SDK) can
 # talk to this agent alongside the native adk_api routes.

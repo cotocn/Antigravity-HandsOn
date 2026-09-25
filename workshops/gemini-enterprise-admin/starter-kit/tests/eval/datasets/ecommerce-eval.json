@@ -4,7 +4,7 @@
       "eval_case_id": "top_selling_categories",
       "prompt": {
         "role": "user",
-        "parts": [{"text": "theLook eCommerce のデータから、売れ筋の衣類・コスメカテゴリ上位と特徴を教えてください。"}]
+        "parts": [{"text": "theLook eCommerce のデータから、売れ筋の衣類・ファッションカテゴリ上位と特徴を教えてください。"}]
       },
       "reference": {
         "response": {
@@ -40,15 +40,15 @@
       }
     },
     {
-      "eval_case_id": "out_of_scope_shiseido_store",
+      "eval_case_id": "out_of_scope_physical_store",
       "prompt": {
         "role": "user",
-        "parts": [{"text": "資生堂銀座本店の本日の営業時間を教えてください。"}]
+        "parts": [{"text": "渋谷にある実店舗の本日の営業時間と駐車場の空き状況を教えてください。"}]
       },
       "reference": {
         "response": {
           "role": "model",
-          "parts": [{"text": "申し訳ありません。本アシスタントが参照している公開データには資生堂の実店舗情報や営業時間データは含まれておりません。"}]
+          "parts": [{"text": "申し訳ありません。本アシスタントが参照している公開データには実店舗の営業時間や駐車場の空き状況に関するデータは含まれておりません。"}]
         }
       }
     }
